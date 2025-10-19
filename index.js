@@ -31,6 +31,13 @@ async function run() {
         const result = await jobsCollection.findOne(query)
         res.send(result)
     })
+    // find some job data for feature card with limit function
+    app.get('/featuredJob', async (req, res)=>{
+      const jobs = jobsCollection.find().limit(8)
+      const result = await jobs.toArray()
+      res.send(result)
+    })
+    
     // applicant data post 
     app.post('/application', async (req, res)=>{
       const application = req.body;
@@ -42,6 +49,25 @@ async function run() {
       // const application = req.body;
       const query = applyCollection.find()
       const result = await query.toArray()
+      res.send(result)
+    })
+    // my application data -
+    app.get('/applications', async (req, res)=>{
+      const email = req.query.email;
+
+      const query = {email : email}
+      const result = await applyCollection.find(query).toArray()
+      // optional
+      for(const application of result){
+        const jobId = application.jobId;
+        const jobQuery = {_id: new ObjectId(jobId)}
+        const job = await jobsCollection.findOne(jobQuery);
+        application.company = job.company;
+        application.title = job.title;
+        application.company_logo = job.company_logo
+        application.jobType = job.jobType
+        application.applicationDeadline = job.applicationDeadline
+      }
       res.send(result)
     })
 
