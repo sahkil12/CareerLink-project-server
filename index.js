@@ -24,6 +24,13 @@ async function run() {
         const result = await cursor.toArray()
         res.send(result)
     })
+    // add jobs 
+    app.post('/jobs', async(req, res)=>{
+      const newJobs = req.body;
+      const result = await jobsCollection.insertOne(newJobs)
+      res.send(result) 
+    })
+
     // get job single data 
     app.get(`/jobs/:id`, async (req, res)=>{
         const id = req.params.id
@@ -70,6 +77,13 @@ async function run() {
       }
       res.send(result)
     })
+    // delete my application
+    app.delete(`/applications/:id`, async (req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await applyCollection.deleteOne(query)
+      res.send(result)
+    })
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
@@ -77,7 +91,7 @@ async function run() {
     // await client.close();
   }
 }
-run().catch(console.dir);
+run().catch(console.dir); 
 
 
 app.get('/', (req, res)=>{
