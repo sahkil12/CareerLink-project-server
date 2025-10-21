@@ -20,7 +20,12 @@ async function run() {
     const applyCollection = client.db("careerLink").collection("applicant")
     // jobs api
     app.get('/jobs', async (req, res)=>{
-        const cursor = jobsCollection.find();
+        const email = req.query.email
+        const query = {}
+        if(email){
+          query.hr_email = email
+        }
+        const cursor = jobsCollection.find(query);
         const result = await cursor.toArray()
         res.send(result)
     })
@@ -77,11 +82,31 @@ async function run() {
       }
       res.send(result)
     })
+    // find how many applicant in a job with job id
+    app.get('/applications/job/:job_id', async (req, res)=>{
+      const job_id = req.params.job_id;
+      const query = {jobId: job_id}
+      const result = await applyCollection.find(query).toArray()
+      res.send(result)
+    })
+
     // delete my application
     app.delete(`/applications/:id`, async (req, res)=>{
       const id = req.params.id;
       const query = {_id: new ObjectId(id)};
       const result = await applyCollection.deleteOne(query)
+      res.send(result)
+    })
+    // updated application status
+    app.patch('/applications/:id', async(req, res)=>{
+      const id = req.params.id
+      const filter = {_id: new ObjectId(id)}
+      const updatedDoc = {
+        $set:{
+          status: req.body.status
+        }
+      }
+      const result = await applyCollection.updateOne(filter, updatedDoc)
       res.send(result)
     })
 
