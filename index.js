@@ -1,12 +1,47 @@
 const express = require('express');
 const cors = require('cors');
 const app = express()
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 require('dotenv').config();
 const { MongoClient, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 // middleware
 app.use(cors())
 app.use(express.json())
+
+const admin = require("firebase-admin");
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const verifyFireBaseToken = async(req, res, next)=>{
+
+  const authHeader = req?.headers?.authorization;
+  if(!authHeader || !authHeader.startsWith("Bearer ")){
+    return res.status(401).send({message: 'unauthorized access'})
+  }
+  const token = authHeader.split(' ')[1]
+  try{
+    const decoded = await admin.auth().verifyIdToken(token)
+    req.decoded = decoded
+    next()
+  }
+  catch(error){
+     return res.status(401).send({message: 'unauthorized access'})
+  }
+}
+
+const verifyTokenEmail =(req, res, next)=>{
+  if(req.query.email !== req.decoded.email){
+     return res.status(403).send({message : 'forbidden access'})
+  }
+  next()
+}
+
 // mongodb connection--
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.gr8kgxz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -19,7 +54,14 @@ async function run() {
     const jobsCollection = client.db("careerLink").collection("jobs")
     const applyCollection = client.db("careerLink").collection("applicant")
     // jobs api
-    app.get('/jobs', async (req, res)=>{
+    // Get all jobs (public)
+    app.get('/jobs', async (req, res) => {
+    const cursor = jobsCollection.find({});
+    const result = await cursor.toArray();
+    res.send(result);
+    });
+
+    app.get('/myPostedJobs', verifyFireBaseToken, verifyTokenEmail, async (req, res)=>{
         const email = req.query.email
         const query = {}
         if(email){
@@ -64,9 +106,8 @@ async function run() {
       res.send(result)
     })
     // my application data -
-    app.get('/applications', async (req, res)=>{
+    app.get('/applications', verifyFireBaseToken, verifyTokenEmail, async (req, res)=>{
       const email = req.query.email;
-
       const query = {email : email}
       const result = await applyCollection.find(query).toArray()
       // optional
@@ -110,14 +151,12 @@ async function run() {
       res.send(result)
     })
 
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
+
   }
 }
 run().catch(console.dir); 
-
 
 app.get('/', (req, res)=>{
     res.send('CareerLink is Start')
