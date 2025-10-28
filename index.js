@@ -49,7 +49,7 @@ const client = new MongoClient(uri)
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     // jobs data collection in database 
     const jobsCollection = client.db("careerLink").collection("jobs")
     const applyCollection = client.db("careerLink").collection("applicant")
